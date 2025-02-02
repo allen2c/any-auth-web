@@ -31,10 +31,6 @@ await server.register(FastifyVite, {
 
 await server.vite.ready();
 
-server.get("/", async (request, reply) => {
-  return reply.html();
-});
-
 await server.listen({
   port: process.env.PORT || 3000,
 });
