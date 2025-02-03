@@ -1,36 +1,18 @@
+import process from "node:process";
 import Fastify from "fastify";
 import FastifyVite from "@fastify/vite";
-import fastifyEnv from "@fastify/env";
 
-// Fastify + React + Vite configuration
-const server = Fastify({
-  logger: {
-    transport: {
-      target: "@fastify/one-line-logger",
-    },
-  },
-});
-
-const schema = {
-  type: "object",
-  required: ["PORT"],
-  properties: {
-    PORT: {
-      type: "number",
-      default: 3000,
-    },
-  },
-};
-
-await server.register(fastifyEnv, { dotenv: true, schema });
+const server = Fastify();
 
 await server.register(FastifyVite, {
-  root: import.meta.url,
-  renderer: "@fastify/react",
+  root: import.meta.url, // where to look for vite.config.js
+  dev: process.argv.includes("--dev"),
+  spa: true,
+});
+
+server.get("/", (req, reply) => {
+  return reply.html();
 });
 
 await server.vite.ready();
-
-await server.listen({
-  port: process.env.PORT || 3000,
-});
+await server.listen({ port: 3000 });

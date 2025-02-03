@@ -1,15 +1,7 @@
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-
+import { resolve, dirname } from "node:path"; // eslint-disable-line
 import viteReact from "@vitejs/plugin-react";
-import viteFastifyReact from "@fastify/react/plugin";
-
-const path = fileURLToPath(import.meta.url);
 
 export default {
-  root: join(dirname(path), "client"),
-  plugins: [viteReact(), viteFastifyReact()],
-  ssr: {
-    external: ["use-sync-external-store"],
-  },
+  root: resolve(import.meta.dirname, "client"),
+  plugins: [viteReact({ jsxRuntime: "classic" })],
 };
