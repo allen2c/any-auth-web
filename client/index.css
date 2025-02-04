@@ -1,0 +1,10 @@
+.app-container {
+  display: flex;
+  flex-direction: column; /* Vertical arrangement */
+  min-height: 100vh; /* Ensure container occupies full viewport height */
+}
+
+.content {
+  flex-grow: 1; /* Fill remaining space */
+  padding: 20px; /* Content area padding */
+}
