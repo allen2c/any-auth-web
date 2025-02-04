@@ -7,16 +7,21 @@ function NavigationBar() {
 
   return (
     <header className="w-full bg-white shadow">
-      <nav className="flex items-center justify-between px-6 h-16">
-        {/* Left side: Logo & Projects dropdown */}
+      <nav
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8
+                  flex items-center justify-between h-16"
+      >
+        {/* Left side */}
         <div className="flex items-center space-x-8">
           <Link to="/" className="flex items-center">
             <img
               src="/logo.png"
               alt="AnyAuth Logo"
-              className="max-h-full w-auto object-contain"
+              className="h-8 w-auto object-contain"
             />
-            <span className="text-2xl font-bold text-gray-900">AnyAuth</span>
+            <span className="text-2xl font-bold text-gray-900 ml-2">
+              AnyAuth
+            </span>
           </Link>
           <div className="relative group">
             <button

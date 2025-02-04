@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "latest",
+    "autoprefixer": "latest",
     "eslint": "latest",
     "postcss": "latest",
     "postcss-nesting": "latest",

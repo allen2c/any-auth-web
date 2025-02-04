@@ -9,13 +9,6 @@
   min-height: 100vh;
 }
 
-/* Style for the Navigation Bar itself to ensure horizontal layout inside */
-header nav.max-w-7xl.mx-auto.px-4.sm\:px-6.lg\:px-8 {
-  display: flex; /* Enable flexbox for nav items */
-  justify-content: space-between; /* Space items out */
-  align-items: center; /* Vertically align items in the center */
-}
-
 .sidebar {
   width: 250px; /* Sidebar width - keep this if you plan to use sidebar later */
   background-color: #f0f2f5;
