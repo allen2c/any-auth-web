@@ -17,7 +17,8 @@ function NavigationBar() {
             <img
               src="/logo.png"
               alt="AnyAuth Logo"
-              className="h-8 w-auto object-contain"
+              style={{ height: "40px", width: "auto" }}
+              className="object-contain"
             />
             <span className="text-2xl font-bold text-gray-900 ml-2">
               AnyAuth
