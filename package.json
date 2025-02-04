@@ -29,6 +29,7 @@
     "@fastify/one-line-logger": "latest",
     "@fastify/react": "latest",
     "@fastify/vite": "latest",
+    "@tailwindcss/vite": "latest",
     "eslint-plugin-react": "latest",
     "fastify": "latest",
     "history": "latest",
