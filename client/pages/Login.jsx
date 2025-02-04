@@ -1,7 +1,13 @@
 // client/pages/Login.jsx
-import React from "react";
+import React, { useState } from "react";
 
 function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className="login-page">
       <div className="container">
@@ -16,20 +22,34 @@ function Login() {
             placeholder="Username or Email"
             required
           />
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Password"
-            required
-          />
+          <div className="password-input-container">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              placeholder="Password"
+              required
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={togglePasswordVisibility}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
           <button type="submit">Login</button>
         </form>
         <hr />
         <div>
-          <h3>Or use Google Login</h3>
+          <h3>Or use other login methods</h3>
           <a href="/auth/google/login" className="google-login-btn">
-            Use Google Login
+            <img
+              src="https://www.google.com/favicon.ico"
+              alt="Google Logo"
+              className="google-icon"
+            />
+            Login with Google
           </a>
         </div>
         <div className="mt-4 text-sm">

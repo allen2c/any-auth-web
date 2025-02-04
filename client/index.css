@@ -112,3 +112,44 @@
   border: 0;
   border-top: 1px solid #eee;
 }
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.login-page .google-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #db4437;
+}
+
+.password-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-container input {
+  width: 100%;
+  padding-right: 60px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+
+.password-toggle:hover {
+  color: #0056b3;
+}
