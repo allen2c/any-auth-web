@@ -1,10 +1,121 @@
+/* client/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .app-container {
   display: flex;
-  flex-direction: column; /* Vertical arrangement */
-  min-height: 100vh; /* Ensure container occupies full viewport height */
+  flex-direction: column; /* Keep vertical direction for app container */
+  min-height: 100vh;
 }
 
-.content {
-  flex-grow: 1; /* Fill remaining space */
-  padding: 20px; /* Content area padding */
+/* Style for the Navigation Bar itself to ensure horizontal layout inside */
+header nav.max-w-7xl.mx-auto.px-4.sm\:px-6.lg\:px-8 {
+  display: flex; /* Enable flexbox for nav items */
+  justify-content: space-between; /* Space items out */
+  align-items: center; /* Vertically align items in the center */
+}
+
+.sidebar {
+  width: 250px; /* Sidebar width - keep this if you plan to use sidebar later */
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+
+.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar nav ul li {
+  margin-bottom: 10px;
+}
+
+.sidebar nav ul li a {
+  display: block;
+  padding: 10px 15px;
+  color: #333;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.sidebar nav ul li a:hover,
+.sidebar nav ul li a.active {
+  background-color: #e0e0e0;
+  color: #007bff;
+}
+
+.content-area {
+  flex-grow: 1;
+  padding: 30px;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f4f4f4;
+}
+
+.login-page .container {
+  background-color: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 80%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.login-page h1 {
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.login-page input[type="text"],
+.login-page input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.login-page button[type="submit"],
+.login-page .google-login-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 16px;
+  margin-top: 20px;
+  text-decoration: none;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-page button[type="submit"]:hover,
+.login-page .google-login-btn:hover {
+  background-color: #0056b3;
+}
+
+.login-page .google-login-btn {
+  background-color: #db4437; /* Google Red Color */
+}
+
+.login-page .google-login-btn:hover {
+  background-color: #c5382b;
+}
+
+.login-page hr {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  border: 0;
+  border-top: 1px solid #eee;
 }
