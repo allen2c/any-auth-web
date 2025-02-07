@@ -60,6 +60,28 @@ const AnyAuthTokenSchema = z.object({
   meta: z.record(z.any()).optional(), // Assuming meta is an object (record) with any key-value pairs and is optional
 });
 
+const AnyAuthUserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  full_name: z.string().nullable(),
+  email: z.string().email(),
+  email_verified: z.boolean(),
+  phone: z.string().nullable(),
+  phone_verified: z.boolean(),
+  disabled: z.boolean(),
+  profile: z.string(),
+  picture: z.string(),
+  website: z.string(),
+  gender: z.string(),
+  birthdate: z.string(),
+  zoneinfo: z.string(),
+  locale: z.string(),
+  address: z.string(),
+  metadata: z.record(z.any()),
+  created_at: z.number(),
+  updated_at: z.number(),
+});
+
 // AnyAuth API Client
 const anyAuthApiClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
@@ -67,8 +89,40 @@ const anyAuthApiClient = axios.create({
     "Content-Type": "application/json",
   },
 });
+anyAuthApiClient.state = {};
 
-// Add this after the anyAuthApiClient declaration
+anyAuthApiClient.interceptors.response.use(
+  (response) => response, // Response directly if successful
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Check if the error is a 401 and has not attempted to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true; // Mark as retried to avoid infinite loops
+
+      try {
+        server.log.info("Access token expired, attempting to refresh...");
+        await authenticateApiClients(); // Refresh the token
+        server.log.info("Successfully refreshed access token.");
+
+        // Use the new token to resend the original request
+        originalRequest.headers.Authorization =
+          anyAuthApiClient.defaults.headers.common.Authorization;
+        return anyAuthApiClient(originalRequest); // Resend the request
+      } catch (refreshError) {
+        server.log.error(
+          `Failed to refresh access token: ${JSON.stringify(refreshError)}`
+        );
+        // Authentication failed, you can choose to throw an error or handle it in another way (e.g., log out the application)
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Non-401 error, or refresh validation failed, throw an error
+    return Promise.reject(error);
+  }
+);
+
 async function authenticateApiClients() {
   try {
     // Validate critical environment variables
@@ -113,6 +167,28 @@ async function authenticateApiClients() {
     anyAuthApiClient.defaults.headers.common[
       "Authorization"
     ] = `Bearer ${access_token}`;
+
+    // **--- Token Validation Step ---**
+    server.log.info("Validating access token by calling /me API...");
+    try {
+      const meResponse = await anyAuthApiClient.get("/me");
+      if (!meResponse.data) {
+        throw new Error("No data received from /me API validation call");
+      }
+      const validatedMeResponse = AnyAuthUserSchema.parse(meResponse.data);
+      anyAuthApiClient.state.user = validatedMeResponse;
+      server.log.info(
+        `[GET /me] API call successful: ${JSON.stringify(validatedMeResponse)}`
+      );
+    } catch (meError) {
+      server.log.error(
+        `[GET /me] API call failed, access token is invalid: ${JSON.stringify(
+          meError.response ? meError.response.status : meError.message
+        )}`
+      );
+      throw new Error(`Failed to validate access token: ${meError.message}`); // Re-throw error to indicate authentication failure
+    }
+    // **--- End Token Validation Step ---**
 
     return true;
   } catch (error) {
