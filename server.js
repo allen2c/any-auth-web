@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 import process from "node:process";
 import { URLSearchParams } from "node:url";
 import { z } from "zod";
+import { faker } from "@faker-js/faker";
 
 // Environment Options
 const envOptions = {
@@ -40,14 +41,34 @@ const GoogleAccessTokenSchema = z.object({
   }),
 });
 
-const GoogleUserInfoSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
-  verified_email: z.boolean(),
-  name: z.string(),
-  given_name: z.string(),
-  picture: z.string(),
-});
+const GoogleUserInfoSchema = z
+  .object({
+    id: z.string(),
+    email: z.string().email(),
+    verified_email: z.boolean(),
+    name: z.string(),
+    given_name: z.string(),
+    picture: z.string(),
+  })
+  .transform((googleUser) => ({
+    ...googleUser,
+
+    toAnyAuthUserCreate: () => ({
+      username: googleUser.email.split("@")[0],
+      full_name: googleUser.name,
+      email: googleUser.email,
+      phone: null,
+      password: Array.from({ length: 4 }, () => faker.internet.password()).join(
+        ""
+      ),
+      metadata: {
+        provider: "google",
+        googleId: googleUser.id,
+        picture: googleUser.picture,
+        verified_email: googleUser.verified_email,
+      },
+    }),
+  }));
 
 const AnyAuthTokenSchema = z.object({
   access_token: z.string(),
@@ -218,6 +239,34 @@ async function authenticateApiClients() {
   }
 }
 
+async function registerUser(userData) {
+  try {
+    // Validate the incoming user data against the expected schema.
+    // This schema corresponds to the OpenAPI /register request body (UserCreate)
+    const validatedUserData = AnyAuthUserCreateSchema.parse(userData);
+    server.log.info(
+      `Registering new user: ${JSON.stringify(validatedUserData)}`
+    );
+
+    // Make a POST request to the /register endpoint with the validated user data.
+    const response = await anyAuthApiClient.post(
+      "/register",
+      validatedUserData
+    );
+
+    // Validate the response data against the expected Token schema.
+    // The /register endpoint is documented to return a Token object.
+    const token = AnyAuthTokenSchema.parse(response.data);
+    server.log.info("User registered successfully:", token);
+
+    // Return the token (or you could choose to handle it further)
+    return token;
+  } catch (error) {
+    server.log.error(`Failed to register user: ${error}`);
+    throw error;
+  }
+}
+
 // Fastify Application
 const server = Fastify({
   logger: {
@@ -305,6 +354,10 @@ async function startServer() {
         request.log.info(
           `User Information received: ${JSON.stringify(userInfo)}`
         );
+
+        // Register the user
+        const user_token = await registerUser(userInfo.toAnyAuthUserCreate());
+        request.log.info(`Login user token: ${JSON.stringify(user_token)}`);
 
         // Store the login state as needed
         reply.setCookie("user", JSON.stringify(userInfo), {
