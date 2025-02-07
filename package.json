@@ -30,6 +30,8 @@
     "@fastify/one-line-logger": "^2",
     "@fastify/vite": "^7",
     "@tailwindcss/vite": "^4",
+    "cache-manager": "*",
+    "cache-manager-fs-hash": "*",
     "eslint-plugin-react": "^7",
     "fastify": "^5",
     "history": "^5",
@@ -41,7 +43,8 @@
     "react-leaflet": "^5",
     "react-router-dom": "^7",
     "unihead": "*",
-    "valtio": "^2"
+    "valtio": "^2",
+    "zod": "^3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "*",
