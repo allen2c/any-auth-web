@@ -60,18 +60,7 @@ const AnyAuthTokenSchema = z.object({
   meta: z.record(z.any()).optional(), // Assuming meta is an object (record) with any key-value pairs and is optional
 });
 
-// Authentication response data: {
-//   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNjUyMzFkMC1kZTdjLTRjMzctODZhYS1mYzk1OTBhNWI4ZWQiLCJpYXQiOjE3Mzg5MjA5NzMsImV4cCI6MTczODkyMTg3M30.GRZGE6_Pz2RIufjZL6Qm8GGtKuSwtY9_E71hywwzPTM",
-//   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNjUyMzFkMC1kZTdjLTRjMzctODZhYS1mYzk1OTBhNWI4ZWQiLCJpYXQiOjE3Mzg5MjA5NzMsImV4cCI6MTczOTUyNTc3M30.wi1Dl3XjohQAcaxoKJV9I5T7xxYzwSGi7ACI-Fho2WY",
-//   "token_type": "Bearer",
-//   "scope": "openid email profile",
-//   "expires_at": 1738921873,
-//   "expires_in": 900,
-//   "issued_at": "2025-02-07T09:36:13.098736+00:00",
-//   "meta": {}
-// }
-
-//
+// AnyAuth API Client
 const anyAuthApiClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
   headers: {
