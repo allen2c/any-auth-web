@@ -17,6 +17,15 @@ const AccessTokenSchema = z.object({
   }),
 });
 
+const UserInfoSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  verified_email: z.boolean(),
+  name: z.string(),
+  given_name: z.string(),
+  picture: z.string(),
+});
+
 const server = Fastify({
   logger: {
     transport: {
@@ -93,10 +102,7 @@ server.get("/auth/google/callback", async (request, reply) => {
         },
       }
     );
-    request.log.info({
-      msg: "Google API response status",
-      status: userInfoResponse.status,
-    });
+    request.log.info(`Google API response status: ${userInfoResponse.status}`);
 
     if (!userInfoResponse.ok) {
       const errorText = await userInfoResponse.text();
@@ -105,15 +111,9 @@ server.get("/auth/google/callback", async (request, reply) => {
       );
     }
 
-    const userInfo = await userInfoResponse.json();
-    request.log.info({
-      msg: "User Information received",
-      user: {
-        email: userInfo.email,
-        name: userInfo.name,
-        hasProfile: Boolean(userInfo.profile),
-      },
-    });
+    const rawUserInfo = await userInfoResponse.json();
+    const userInfo = UserInfoSchema.parse(rawUserInfo);
+    request.log.info(`User Information received: ${JSON.stringify(userInfo)}`);
 
     // Store the login state as needed
     reply.setCookie("user", JSON.stringify(userInfo), {
