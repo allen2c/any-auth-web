@@ -25,6 +25,7 @@
     "lint": "eslint . --fix"
   },
   "dependencies": {
+    "@faker-js/faker": "*",
     "@fastify/env": "^5",
     "@fastify/oauth2": "^8",
     "@fastify/one-line-logger": "^2",
