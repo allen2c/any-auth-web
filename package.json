@@ -30,6 +30,7 @@
     "@fastify/one-line-logger": "^2",
     "@fastify/vite": "^7",
     "@tailwindcss/vite": "^4",
+    "axios": "^1",
     "cache-manager": "*",
     "cache-manager-fs-hash": "*",
     "eslint-plugin-react": "^7",
