@@ -82,6 +82,25 @@ const AnyAuthUserSchema = z.object({
   updated_at: z.number(),
 });
 
+const AnyAuthUserCreateSchema = z.object({
+  username: z
+    .string()
+    .min(4, { message: "Username must be at least 4 characters" })
+    .max(64, { message: "Username must be at most 64 characters" })
+    .regex(/^[a-zA-Z0-9_-]+$/, {
+      message:
+        "Username must only contain alphanumeric characters, underscores, or hyphens",
+    }),
+  full_name: z.string().optional().nullable(),
+  email: z.string().email({ message: "Invalid email address" }),
+  phone: z.string().optional().nullable(),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters" })
+    .max(64, { message: "Password must be at most 64 characters" }),
+  metadata: z.record(z.any()).default({}),
+});
+
 // AnyAuth API Client
 const anyAuthApiClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
