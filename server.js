@@ -4,6 +4,18 @@ import fastifyEnv from "@fastify/env";
 import fastifyOAuth2 from "@fastify/oauth2";
 import fetch from "node-fetch";
 import process from "node:process";
+import { z } from "zod";
+
+const AccessTokenSchema = z.object({
+  token: z.object({
+    access_token: z.string(),
+    expires_in: z.number(),
+    scope: z.string(),
+    token_type: z.string(),
+    id_token: z.string(),
+    expires_at: z.string().or(z.date()),
+  }),
+});
 
 const server = Fastify({
   logger: {
@@ -41,7 +53,7 @@ server.log.info(
 // Register the OAuth2 plugin with Google configuration
 server.register(fastifyOAuth2, {
   name: "googleOAuth2",
-  scope: ["profile", "email"],
+  scope: ["openid", "email", "profile"],
   credentials: {
     client: {
       id: process.env.GOOGLE_CLIENT_ID,
@@ -60,20 +72,14 @@ server.get("/auth/google/callback", async (request, reply) => {
   try {
     request.log.info("Starting OAuth callback");
 
-    const token =
+    const rawToken =
       await server.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(
         request
       );
-    request.log.info({
-      msg: "Token received: ",
-      tokenInfo: {
-        hasAccessToken: Boolean(token?.access_token),
-        tokenType: token?.token_type,
-        expiresIn: token?.expires_in,
-      },
-    });
+    const validatedToken = AccessTokenSchema.parse(rawToken);
+    request.log.info(`Token object: ${JSON.stringify(validatedToken)}`);
 
-    if (!token?.access_token) {
+    if (!validatedToken.token.access_token) {
       throw new Error("No access token received from Google");
     }
 
@@ -83,7 +89,7 @@ server.get("/auth/google/callback", async (request, reply) => {
       "https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
       {
         headers: {
-          Authorization: `Bearer ${token.access_token}`,
+          Authorization: `Bearer ${validatedToken.token.access_token}`,
         },
       }
     );
@@ -131,11 +137,12 @@ server.get("/auth/google/callback", async (request, reply) => {
       </html>
     `);
   } catch (err) {
-    request.log.error("Authentication failed:", {
-      error: err.message,
-      stack: err.stack,
-    });
-    reply.code(500).send(`Authentication failed: ${err.message}`);
+    const userFriendlyMessage =
+      process.env.NODE_ENV === "production"
+        ? "An error occurred during authentication"
+        : `Authentication failed: ${err.message}`;
+    request.log.error(`Authentication failed: ${userFriendlyMessage}`);
+    reply.code(500).send(userFriendlyMessage);
   }
 });
 
