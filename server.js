@@ -1,13 +1,14 @@
 import Fastify from "fastify";
 import FastifyVite from "@fastify/vite";
 import axios from "axios";
+import crypto from "node:crypto";
 import fastifyEnv from "@fastify/env";
 import fastifyOAuth2 from "@fastify/oauth2";
 import fetch from "node-fetch";
 import process from "node:process";
 import { URLSearchParams } from "node:url";
-import { z } from "zod";
 import { faker } from "@faker-js/faker";
+import { z } from "zod";
 
 // Environment Options
 const envOptions = {
@@ -28,6 +29,11 @@ const envOptions = {
   },
   dotenv: true,
 };
+
+// Helper function to generate random string
+function generateRandomString(length = 64) {
+  return crypto.randomBytes(length).toString("hex");
+}
 
 // Schemas
 const GoogleAccessTokenSchema = z.object({
@@ -359,7 +365,19 @@ async function startServer() {
         const user_token = await registerUser(userInfo.toAnyAuthUserCreate());
         request.log.info(`Login user token: ${JSON.stringify(user_token)}`);
 
-        // Store the login state as needed
+        // Save the user token to the server side cache
+        const cacheUserKey = `usr_${generateRandomString()}`;
+        // TODO: Save the user token to the server side cache
+
+        // Set only the cache key in the cookie
+        reply.setCookie("session_id", cacheUserKey, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production", // Use secure in production
+          sameSite: "lax",
+          maxAge: 24 * 60 * 60, // 24 hours in seconds
+        });
+        // Store the user info in cookie (optional and consider security implications for sensitive data)
         reply.setCookie("user", JSON.stringify(userInfo), {
           path: "/",
           httpOnly: true,
