@@ -9,6 +9,10 @@ import process from "node:process";
 import { URLSearchParams } from "node:url";
 import { faker } from "@faker-js/faker";
 import { z } from "zod";
+import flatCache from "flat-cache";
+
+// 7 days in seconds
+const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
 
 // Environment Options
 const envOptions = {
@@ -29,6 +33,9 @@ const envOptions = {
   },
   dotenv: true,
 };
+
+// Cache Options
+const cache = flatCache.create({ cacheDir: ".cache" });
 
 // Helper function to generate random string
 function generateRandomString(length = 64) {
@@ -367,7 +374,8 @@ async function startServer() {
 
         // Save the user token to the server side cache
         const cacheUserKey = `usr_${generateRandomString()}`;
-        // TODO: Save the user token to the server side cache
+        cache.setKey(cacheUserKey, JSON.stringify(user_token));
+        cache.save();
 
         // Set only the cache key in the cookie
         reply.setCookie("session_id", cacheUserKey, {
@@ -375,7 +383,7 @@ async function startServer() {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production", // Use secure in production
           sameSite: "lax",
-          maxAge: 24 * 60 * 60, // 24 hours in seconds
+          maxAge: CACHE_TTL, // 7 days in seconds
         });
         // Store the user info in cookie (optional and consider security implications for sensitive data)
         reply.setCookie("user", JSON.stringify(userInfo), {
