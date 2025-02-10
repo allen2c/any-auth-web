@@ -19,19 +19,28 @@ const envOptions = {
   schema: {
     type: "object",
     required: [
+      "NODE_ENV",
       "APPLICATION_USERNAME",
       "APPLICATION_PASSWORD",
       "GOOGLE_CLIENT_SECRET",
       "GOOGLE_CLIENT_ID",
     ],
     properties: {
-      APPLICATION_USERNAME: { type: "string" },
-      APPLICATION_PASSWORD: { type: "string" },
-      GOOGLE_CLIENT_SECRET: { type: "string" },
-      GOOGLE_CLIENT_ID: { type: "string" },
+      NODE_ENV: {
+        type: "string",
+        default: "development",
+        enum: ["development", "staging", "production", "test"],
+      },
+      APPLICATION_USERNAME: { type: "string", minLength: 1 },
+      APPLICATION_PASSWORD: { type: "string", minLength: 1 },
+      GOOGLE_CLIENT_SECRET: { type: "string", minLength: 1 },
+      GOOGLE_CLIENT_ID: { type: "string", minLength: 1 },
     },
   },
   dotenv: true,
+  error: (errors) => {
+    throw new Error(`Environment validation failed: ${JSON.stringify(errors)}`);
+  },
 };
 
 // Cache Options
@@ -298,6 +307,9 @@ const server = Fastify({
 async function startServer() {
   try {
     await server.register(fastifyEnv, envOptions);
+    server.log.info(
+      `Runtime Environment: ${JSON.stringify(server.config.NODE_ENV)}`
+    );
 
     // Authenticate API client before proceeding
     await authenticateApiClients();
@@ -387,7 +399,7 @@ async function startServer() {
         reply.setCookie("session_id", cacheUserKey, {
           path: "/",
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production", // Use secure in production
+          secure: server.config.NODE_ENV === "production", // Use secure in production
           sameSite: "lax",
           maxAge: CACHE_TTL, // 7 days in seconds
         });
@@ -414,7 +426,7 @@ async function startServer() {
       `);
       } catch (err) {
         const userFriendlyMessage =
-          process.env.NODE_ENV === "production"
+          server.config.NODE_ENV === "production"
             ? "An error occurred during authentication"
             : `Authentication failed: ${err.message}`;
         request.log.error(`Authentication failed: ${userFriendlyMessage}`);
