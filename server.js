@@ -362,12 +362,12 @@ async function startServer() {
       spa: true,
     });
 
+    // Register the OAuth2 plugin with Google configuration
     server.log.info(
       `Google Client ID exists: ${Boolean(
         process.env.GOOGLE_CLIENT_ID
       )}, Secret exists: ${Boolean(process.env.GOOGLE_CLIENT_SECRET)}`
     );
-    // Register the OAuth2 plugin with Google configuration
     server.register(fastifyOAuth2, {
       name: "googleOAuth2",
       scope: ["openid", "email", "profile"],
@@ -487,6 +487,26 @@ async function startServer() {
     server.log.error("Failed to start server:", error);
     process.exit(1);
   }
+
+  server.get("/me", async (req, reply) => {
+    // Get `session_id` from cookie
+    const sessionId = req.cookies.session_id;
+    if (!sessionId) {
+      return reply.code(401).send("Unauthorized");
+    }
+    // Get the user token from the cache
+    const rawUserToken = cache.getKey(sessionId);
+    if (!rawUserToken) {
+      return reply.code(401).send("Unauthorized");
+    }
+    const userToken = AnyAuthTokenSchema.parse(rawUserToken);
+
+    const rawUser = await anyAuthApiActiveUserClient.get("/me", {
+      headers: { Authorization: `Bearer ${userToken.access_token}` },
+    });
+    const validatedUser = AnyAuthUserSchema.parse(rawUser.data);
+    return reply.send(validatedUser);
+  });
 }
 
 // Start the server
