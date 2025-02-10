@@ -92,16 +92,26 @@ const GoogleUserInfoSchema = z
     }),
   }));
 
-const AnyAuthTokenSchema = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
-  token_type: z.string(),
-  scope: z.string(),
-  expires_at: z.number(),
-  expires_in: z.number(),
-  issued_at: z.string(), // Assuming issued_at is a string in ISO format
-  meta: z.record(z.any()).optional(), // Assuming meta is an object (record) with any key-value pairs and is optional
-});
+const AnyAuthTokenSchema = z
+  .object({
+    access_token: z.string(),
+    refresh_token: z.string(),
+    token_type: z.string(),
+    scope: z.string(),
+    expires_at: z.number(),
+    expires_in: z.number(),
+    issued_at: z.string(), // Assuming issued_at is a string in ISO format
+    meta: z.record(z.any()).optional(), // Assuming meta is an object (record) with any key-value pairs and is optional
+  })
+  .transform((token) => ({
+    ...token,
+
+    isTokenExpired: () => {
+      const now = new Date();
+      const expiresAtDate = new Date(token.expires_at * 1000);
+      return expiresAtDate < now;
+    },
+  }));
 
 const AnyAuthUserSchema = z.object({
   id: z.string(),
@@ -167,6 +177,41 @@ function saveUserTokenToCache(sessionId, token) {
   // How to hint annotation of data type for tokenData as `AnyAuthTokenSchema`?
   cache.setKey(sessionId, JSON.stringify(token));
   cache.save();
+}
+
+/**
+ * Get a user token from the cache.
+ *
+ * @param {string} sessionId - The session identifier.
+ * @returns {import("zod").infer<typeof AnyAuthTokenSchema> | null} - Token data matching the AnyAuthTokenSchema, or null if not found.
+ */
+async function getAndRefreshIfExpiredUserTokenFromCache(sessionId) {
+  const token = getUserTokenFromCache(sessionId);
+  if (token === null) return null;
+  if (token.isTokenExpired()) {
+    try {
+      const params = new URLSearchParams();
+      params.append("grant_type", "refresh_token");
+      params.append("refresh_token", token.refresh_token);
+      const refreshedToken = await anyAuthApiActiveUserClient.post(
+        "/refresh-token",
+        params,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      );
+      saveUserTokenToCache(sessionId, refreshedToken);
+      return refreshedToken;
+    } catch (error) {
+      server.log.error(
+        `Failed to refresh token from cache: ${JSON.stringify(error)}`
+      );
+      return null;
+    }
+  }
+  return token;
 }
 
 // AnyAuth API Client
@@ -521,7 +566,9 @@ async function startServer() {
         }
 
         // Get the user token from the cache
-        const userToken = getUserTokenFromCache(sessionId);
+        const userToken = await getAndRefreshIfExpiredUserTokenFromCache(
+          sessionId
+        );
         if (!userToken) {
           return reply.code(401).send("Unauthorized");
         }
