@@ -144,6 +144,31 @@ const AnyAuthUserCreateSchema = z.object({
   metadata: z.record(z.any()).default({}),
 });
 
+// Helper Functions
+/**
+ * Get a user token from the cache.
+ *
+ * @param {string} sessionId - The session identifier.
+ * @returns {import("zod").infer<typeof AnyAuthTokenSchema> | null} - Token data matching the AnyAuthTokenSchema, or null if not found.
+ */
+function getUserTokenFromCache(sessionId) {
+  const raw = cache.getKey(sessionId);
+  if (!raw) return null;
+  return AnyAuthTokenSchema.parse(JSON.parse(raw));
+}
+
+/**
+ * Save a user token to the cache.
+ *
+ * @param {string} sessionId - The session identifier.
+ * @param {import("zod").infer<typeof AnyAuthTokenSchema>} tokenData - Token data matching the AnyAuthTokenSchema.
+ */
+function saveUserTokenToCache(sessionId, token) {
+  // How to hint annotation of data type for tokenData as `AnyAuthTokenSchema`?
+  cache.setKey(sessionId, JSON.stringify(token));
+  cache.save();
+}
+
 // AnyAuth API Client
 const anyAuthApiServerClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
@@ -269,6 +294,13 @@ anyAuthApiServerClient.refreshToken = async function () {
     throw error;
   }
 };
+/**
+ * Registers a new user via the AnyAuth API.
+ *
+ * @param {import("zod").infer<typeof AnyAuthUserCreateSchema>} userData - The user's data to be registered.
+ * @returns {Promise<import("zod").infer<typeof AnyAuthTokenSchema>>} A promise that resolves with the token object.
+ * @throws Will throw an error if the registration process fails.
+ */
 anyAuthApiServerClient.registerUser = async function (userData) {
   try {
     // Validate the incoming user data against the expected schema.
@@ -435,8 +467,7 @@ async function startServer() {
 
         // Save the user token to the server side cache
         const cacheUserKey = `usr_${generateRandomString()}`;
-        cache.setKey(cacheUserKey, JSON.stringify(user_token));
-        cache.save();
+        saveUserTokenToCache(cacheUserKey, user_token);
 
         // Set only the cache key in the cookie
         reply.setCookie("session_id", cacheUserKey, {
@@ -490,14 +521,10 @@ async function startServer() {
         }
 
         // Get the user token from the cache
-        const rawUserTokenString = cache.getKey(sessionId);
-        if (!rawUserTokenString) {
+        const userToken = getUserTokenFromCache(sessionId);
+        if (!userToken) {
           return reply.code(401).send("Unauthorized");
         }
-        const rawUserToken = JSON.parse(rawUserTokenString);
-
-        // Parse the token using Zod; if it fails, a ZodError will be thrown.
-        const userToken = AnyAuthTokenSchema.parse(rawUserToken);
 
         // Attempt to get the user data from the AnyAuth API
         server.log.info(`User token: ${JSON.stringify(userToken)}`);
