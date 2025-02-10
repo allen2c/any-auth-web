@@ -5,12 +5,13 @@ import crypto from "node:crypto";
 import fastifyEnv from "@fastify/env";
 import fastifyOAuth2 from "@fastify/oauth2";
 import fetch from "node-fetch";
+import flatCache from "flat-cache";
+import loggerPlugin from "./plugins/logger.js";
 import process from "node:process";
 import { URLSearchParams } from "node:url";
+import { envOptions } from "./plugins/env.js";
 import { faker } from "@faker-js/faker";
 import { z } from "zod";
-import flatCache from "flat-cache";
-import { envOptions } from "./plugins/env.js";
 
 // 7 days in seconds
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
@@ -400,6 +401,9 @@ async function startServer() {
     server.log.info(
       `Runtime Environment: ${JSON.stringify(server.config.NODE_ENV)}`
     );
+
+    // Register the logger plugin
+    await server.register(loggerPlugin);
 
     // Authenticate API client before proceeding
     await anyAuthApiServerClient.authenticate();
