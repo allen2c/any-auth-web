@@ -481,32 +481,34 @@ async function startServer() {
       return reply.html();
     });
 
+    server.get("/me", async (req, reply) => {
+      // Get `session_id` from cookie
+      const sessionId = req.cookies.session_id;
+      if (!sessionId) {
+        return reply.code(401).send("Unauthorized");
+      }
+      // Get the user token from the cache
+      const rawUserToken = cache.getKey(sessionId);
+      if (!rawUserToken) {
+        return reply.code(401).send("Unauthorized");
+      }
+      const userToken = AnyAuthTokenSchema.parse(rawUserToken);
+
+      const rawUser = await anyAuthApiActiveUserClient.get("/me", {
+        headers: { Authorization: `Bearer ${userToken.access_token}` },
+      });
+      const validatedUser = AnyAuthUserSchema.parse(rawUser.data);
+
+      server.log.info(`User ${sessionId}: ${JSON.stringify(validatedUser)}`);
+      return reply.send(validatedUser);
+    });
+
     await server.vite.ready();
     await server.listen({ port: 3000 });
   } catch (error) {
     server.log.error("Failed to start server:", error);
     process.exit(1);
   }
-
-  server.get("/me", async (req, reply) => {
-    // Get `session_id` from cookie
-    const sessionId = req.cookies.session_id;
-    if (!sessionId) {
-      return reply.code(401).send("Unauthorized");
-    }
-    // Get the user token from the cache
-    const rawUserToken = cache.getKey(sessionId);
-    if (!rawUserToken) {
-      return reply.code(401).send("Unauthorized");
-    }
-    const userToken = AnyAuthTokenSchema.parse(rawUserToken);
-
-    const rawUser = await anyAuthApiActiveUserClient.get("/me", {
-      headers: { Authorization: `Bearer ${userToken.access_token}` },
-    });
-    const validatedUser = AnyAuthUserSchema.parse(rawUser.data);
-    return reply.send(validatedUser);
-  });
 }
 
 // Start the server
