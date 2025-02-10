@@ -136,15 +136,21 @@ const AnyAuthUserCreateSchema = z.object({
 });
 
 // AnyAuth API Client
-const anyAuthApiClient = axios.create({
+const anyAuthApiServerClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
   headers: {
     "Content-Type": "application/json",
   },
 });
-anyAuthApiClient.state = {};
+anyAuthApiServerClient.state = {};
+const anyAuthApiActiveUserClient = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-anyAuthApiClient.interceptors.response.use(
+anyAuthApiServerClient.interceptors.response.use(
   (response) => response, // Response directly if successful
   async (error) => {
     const originalRequest = error.config;
@@ -160,8 +166,8 @@ anyAuthApiClient.interceptors.response.use(
 
         // Use the new token to resend the original request
         originalRequest.headers.Authorization =
-          anyAuthApiClient.defaults.headers.common.Authorization;
-        return anyAuthApiClient(originalRequest); // Resend the request
+          anyAuthApiServerClient.defaults.headers.common.Authorization;
+        return anyAuthApiServerClient(originalRequest); // Resend the request
       } catch (refreshError) {
         server.log.error(
           `Failed to refresh access token: ${JSON.stringify(refreshError)}`
@@ -201,7 +207,7 @@ async function authenticateApiClients() {
     params.append("password", process.env.APPLICATION_PASSWORD);
     params.append("grant_type", "password");
 
-    const response = await anyAuthApiClient.post("/token", params, {
+    const response = await anyAuthApiServerClient.post("/token", params, {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
@@ -217,19 +223,19 @@ async function authenticateApiClients() {
     );
 
     // Set the JWT token for all future requests
-    anyAuthApiClient.defaults.headers.common[
+    anyAuthApiServerClient.defaults.headers.common[
       "Authorization"
     ] = `Bearer ${access_token}`;
 
     // **--- Token Validation Step ---**
     server.log.info("Validating access token by calling /me API...");
     try {
-      const meResponse = await anyAuthApiClient.get("/me");
+      const meResponse = await anyAuthApiServerClient.get("/me");
       if (!meResponse.data) {
         throw new Error("No data received from /me API validation call");
       }
       const validatedMeResponse = AnyAuthUserSchema.parse(meResponse.data);
-      anyAuthApiClient.state.user = validatedMeResponse;
+      anyAuthApiServerClient.state.user = validatedMeResponse;
       server.log.info(
         `[GET /me] API call successful: ${JSON.stringify(validatedMeResponse)}`
       );
@@ -262,7 +268,7 @@ async function registerUser(userData) {
     );
 
     // Make a POST request to the /register endpoint with the validated user data.
-    const response = await anyAuthApiClient.post(
+    const response = await anyAuthApiServerClient.post(
       "/register",
       validatedUserData
     );
