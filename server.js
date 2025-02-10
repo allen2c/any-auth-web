@@ -152,46 +152,7 @@ const anyAuthApiServerClient = axios.create({
   },
 });
 anyAuthApiServerClient.state = {};
-const anyAuthApiActiveUserClient = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-anyAuthApiServerClient.interceptors.response.use(
-  (response) => response, // Response directly if successful
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Check if the error is a 401 and has not attempted to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Mark as retried to avoid infinite loops
-
-      try {
-        server.log.info("Access token expired, attempting to refresh...");
-        await authenticateApiClients(); // Refresh the token
-        server.log.info("Successfully refreshed access token.");
-
-        // Use the new token to resend the original request
-        originalRequest.headers.Authorization =
-          anyAuthApiServerClient.defaults.headers.common.Authorization;
-        return anyAuthApiServerClient(originalRequest); // Resend the request
-      } catch (refreshError) {
-        server.log.error(
-          `Failed to refresh access token: ${JSON.stringify(refreshError)}`
-        );
-        // Authentication failed, you can choose to throw an error or handle it in another way (e.g., log out the application)
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // Non-401 error, or refresh validation failed, throw an error
-    return Promise.reject(error);
-  }
-);
-
-async function authenticateApiClients() {
+anyAuthApiServerClient.authenticate = async function () {
   try {
     // Validate critical environment variables
     if (
@@ -244,7 +205,11 @@ async function authenticateApiClients() {
         throw new Error("No data received from /me API validation call");
       }
       const validatedMeResponse = AnyAuthUserSchema.parse(meResponse.data);
+
+      // Set the user for the server side client
       anyAuthApiServerClient.state.user = validatedMeResponse;
+      // Set the token for the server side client
+      anyAuthApiServerClient.state.token = validatedMeResponse;
       server.log.info(
         `[GET /me] API call successful: ${JSON.stringify(validatedMeResponse)}`
       );
@@ -265,7 +230,46 @@ async function authenticateApiClients() {
     );
     throw error;
   }
-}
+};
+anyAuthApiServerClient.interceptors.response.use(
+  (response) => response, // Response directly if successful
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Check if the error is a 401 and has not attempted to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true; // Mark as retried to avoid infinite loops
+
+      try {
+        server.log.info("Access token expired, attempting to refresh...");
+        anyAuthApiServerClient.authenticate();
+        server.log.info("Successfully refreshed access token.");
+
+        // Use the new token to resend the original request
+        originalRequest.headers.Authorization =
+          anyAuthApiServerClient.defaults.headers.common.Authorization;
+        return anyAuthApiServerClient(originalRequest); // Resend the request
+      } catch (refreshError) {
+        server.log.error(
+          `Failed to refresh access token: ${JSON.stringify(refreshError)}`
+        );
+        // Authentication failed, you can choose to throw an error or handle it in another way (e.g., log out the application)
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Non-401 error, or refresh validation failed, throw an error
+    return Promise.reject(error);
+  }
+);
+
+const anyAuthApiActiveUserClient = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+anyAuthApiActiveUserClient.state = {};
 
 async function registerUser(userData) {
   try {
@@ -312,7 +316,7 @@ async function startServer() {
     );
 
     // Authenticate API client before proceeding
-    await authenticateApiClients();
+    await anyAuthApiServerClient.authenticate();
     server.log.info("API clients authenticated successfully");
 
     await server.register(FastifyVite, {
