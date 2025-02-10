@@ -1,9 +1,44 @@
+/* global console document fetch */
 // client/components/NavigationBar.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+// Helper function to retrieve a cookie value by name.
+const getCookie = (name) => {
+  const cookieArr = document.cookie.split(";");
+  for (let cookie of cookieArr) {
+    const [key, value] = cookie.split("=");
+    if (key.trim() === name) {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
+};
+
 function NavigationBar() {
-  const isLoggedIn = false;
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const sessionId = getCookie("session_id");
+    if (sessionId) {
+      // Query the /me API to retrieve user information.
+      // The `credentials: "include"` option makes sure cookies are sent along with the request.
+      fetch("/me", { credentials: "include" })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Not authenticated");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          setUser(data);
+        })
+        .catch((error) => {
+          console.error("Error fetching user info:", error);
+          setUser(null);
+        });
+    }
+  }, []);
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -56,9 +91,9 @@ function NavigationBar() {
           </div>
         </div>
 
-        {/* Right side: Conditional login/console */}
+        {/* Right side: Display user info if authenticated; otherwise, show login button */}
         <div>
-          {isLoggedIn ? (
+          {user ? (
             <div className="flex items-center space-x-4">
               <Link
                 to="/console"
@@ -67,12 +102,20 @@ function NavigationBar() {
                 Console
               </Link>
               <div className="flex items-center space-x-2">
-                <img
-                  src="/user-profile.png"
-                  alt="User Profile"
-                  className="h-8 w-8 rounded-full"
-                />
-                <span className="text-gray-700">User Name</span>
+                {user.picture ? (
+                  <img
+                    src={user.picture}
+                    alt="User Profile"
+                    className="h-8 w-8 rounded-full"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-sm text-gray-700">
+                    {user.username ? user.username.charAt(0).toUpperCase() : ""}
+                  </div>
+                )}
+                <span className="text-gray-700">
+                  {user.full_name || user.username}
+                </span>
               </div>
             </div>
           ) : (
