@@ -231,6 +231,45 @@ anyAuthApiServerClient.authenticate = async function () {
     throw error;
   }
 };
+anyAuthApiServerClient.refreshToken = async function () {
+  // Ensure we have a stored token with a refresh token
+  if (!this.state.token || !this.state.token.refresh_token) {
+    server.log.error("No refresh token available. Please authenticate first.");
+    throw new Error("No refresh token available. Please authenticate first.");
+  }
+
+  // Build the URL-encoded request body with grant_type and refresh_token
+  const params = new URLSearchParams();
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", this.state.token.refresh_token);
+
+  try {
+    // Send POST request with form data
+    const response = await this.post("/refresh-token", params, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    // Validate the response data using our token schema
+    const newToken = AnyAuthTokenSchema.parse(response.data);
+
+    // Update the default Authorization header with the new access token
+    this.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${newToken.access_token}`;
+
+    // Save the new token in the client state
+    this.state.token = newToken;
+
+    server.log.info("Refresh token successful: " + JSON.stringify(newToken));
+    return newToken;
+  } catch (error) {
+    server.log.error(`Failed to refresh token: ${JSON.stringify(error)}`);
+    throw error;
+  }
+};
+
 anyAuthApiServerClient.interceptors.response.use(
   (response) => response, // Response directly if successful
   async (error) => {
@@ -242,7 +281,7 @@ anyAuthApiServerClient.interceptors.response.use(
 
       try {
         server.log.info("Access token expired, attempting to refresh...");
-        anyAuthApiServerClient.authenticate();
+        await anyAuthApiServerClient.refreshToken();
         server.log.info("Successfully refreshed access token.");
 
         // Use the new token to resend the original request
