@@ -10,38 +10,10 @@ import { URLSearchParams } from "node:url";
 import { faker } from "@faker-js/faker";
 import { z } from "zod";
 import flatCache from "flat-cache";
+import { envOptions } from "./plugins/env.js";
 
 // 7 days in seconds
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
-
-// Environment Options
-const envOptions = {
-  schema: {
-    type: "object",
-    required: [
-      "NODE_ENV",
-      "APPLICATION_USERNAME",
-      "APPLICATION_PASSWORD",
-      "GOOGLE_CLIENT_SECRET",
-      "GOOGLE_CLIENT_ID",
-    ],
-    properties: {
-      NODE_ENV: {
-        type: "string",
-        default: "development",
-        enum: ["development", "staging", "production", "test"],
-      },
-      APPLICATION_USERNAME: { type: "string", minLength: 1 },
-      APPLICATION_PASSWORD: { type: "string", minLength: 1 },
-      GOOGLE_CLIENT_SECRET: { type: "string", minLength: 1 },
-      GOOGLE_CLIENT_ID: { type: "string", minLength: 1 },
-    },
-  },
-  dotenv: true,
-  error: (errors) => {
-    throw new Error(`Environment validation failed: ${JSON.stringify(errors)}`);
-  },
-};
 
 // Cache Options
 const cache = flatCache.create({ cacheDir: ".cache" });
@@ -608,7 +580,7 @@ async function startServer() {
     await server.vite.ready();
     await server.listen({ port: 3000 });
   } catch (error) {
-    server.log.error("Failed to start server:", error);
+    console.error("Failed to start server:", error); // eslint-disable-line no-undef
     process.exit(1);
   }
 }
