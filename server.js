@@ -269,7 +269,33 @@ anyAuthApiServerClient.refreshToken = async function () {
     throw error;
   }
 };
+anyAuthApiServerClient.registerUser = async function (userData) {
+  try {
+    // Validate the incoming user data against the expected schema.
+    // This schema corresponds to the OpenAPI /register request body (UserCreate)
+    const validatedUserData = AnyAuthUserCreateSchema.parse(userData);
+    server.log.info(
+      `Registering new user: ${JSON.stringify(validatedUserData)}`
+    );
 
+    // Make a POST request to the /register endpoint with the validated user data.
+    const response = await anyAuthApiServerClient.post(
+      "/register",
+      validatedUserData
+    );
+
+    // Validate the response data against the expected Token schema.
+    // The /register endpoint is documented to return a Token object.
+    const token = AnyAuthTokenSchema.parse(response.data);
+    server.log.info("User registered successfully:", token);
+
+    // Return the token (or you could choose to handle it further)
+    return token;
+  } catch (error) {
+    server.log.error(`Failed to register user: ${error}`);
+    throw error;
+  }
+};
 anyAuthApiServerClient.interceptors.response.use(
   (response) => response, // Response directly if successful
   async (error) => {
@@ -309,34 +335,6 @@ const anyAuthApiActiveUserClient = axios.create({
   },
 });
 anyAuthApiActiveUserClient.state = {};
-
-async function registerUser(userData) {
-  try {
-    // Validate the incoming user data against the expected schema.
-    // This schema corresponds to the OpenAPI /register request body (UserCreate)
-    const validatedUserData = AnyAuthUserCreateSchema.parse(userData);
-    server.log.info(
-      `Registering new user: ${JSON.stringify(validatedUserData)}`
-    );
-
-    // Make a POST request to the /register endpoint with the validated user data.
-    const response = await anyAuthApiServerClient.post(
-      "/register",
-      validatedUserData
-    );
-
-    // Validate the response data against the expected Token schema.
-    // The /register endpoint is documented to return a Token object.
-    const token = AnyAuthTokenSchema.parse(response.data);
-    server.log.info("User registered successfully:", token);
-
-    // Return the token (or you could choose to handle it further)
-    return token;
-  } catch (error) {
-    server.log.error(`Failed to register user: ${error}`);
-    throw error;
-  }
-}
 
 // Fastify Application
 const server = Fastify({
@@ -430,7 +428,9 @@ async function startServer() {
         );
 
         // Register the user
-        const user_token = await registerUser(userInfo.toAnyAuthUserCreate());
+        const user_token = await anyAuthApiServerClient.registerUser(
+          userInfo.toAnyAuthUserCreate()
+        );
         request.log.info(`Login user token: ${JSON.stringify(user_token)}`);
 
         // Save the user token to the server side cache
