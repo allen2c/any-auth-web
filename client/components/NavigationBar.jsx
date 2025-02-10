@@ -1,43 +1,26 @@
-/* global console document fetch */
+/* global console fetch */
 // client/components/NavigationBar.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-
-// Helper function to retrieve a cookie value by name.
-const getCookie = (name) => {
-  const cookieArr = document.cookie.split(";");
-  for (let cookie of cookieArr) {
-    const [key, value] = cookie.split("=");
-    if (key.trim() === name) {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
-};
 
 function NavigationBar() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const sessionId = getCookie("session_id");
-    if (sessionId) {
-      // Query the /me API to retrieve user information.
-      // The `credentials: "include"` option makes sure cookies are sent along with the request.
-      fetch("/me", { credentials: "include" })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Not authenticated");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          setUser(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching user info:", error);
-          setUser(null);
-        });
-    }
+    fetch("/me", { credentials: "include" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Not authenticated");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setUser(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching user info:", error);
+        setUser(null);
+      });
   }, []);
 
   return (

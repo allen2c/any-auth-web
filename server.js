@@ -482,25 +482,53 @@ async function startServer() {
     });
 
     server.get("/me", async (req, reply) => {
-      // Get `session_id` from cookie
-      const sessionId = req.cookies.session_id;
-      if (!sessionId) {
-        return reply.code(401).send("Unauthorized");
-      }
-      // Get the user token from the cache
-      const rawUserToken = cache.getKey(sessionId);
-      if (!rawUserToken) {
-        return reply.code(401).send("Unauthorized");
-      }
-      const userToken = AnyAuthTokenSchema.parse(rawUserToken);
+      try {
+        // Get `session_id` from cookie
+        const sessionId = req.cookies.session_id;
+        if (!sessionId) {
+          return reply.code(401).send("Unauthorized");
+        }
 
-      const rawUser = await anyAuthApiActiveUserClient.get("/me", {
-        headers: { Authorization: `Bearer ${userToken.access_token}` },
-      });
-      const validatedUser = AnyAuthUserSchema.parse(rawUser.data);
+        // Get the user token from the cache
+        const rawUserTokenString = cache.getKey(sessionId);
+        if (!rawUserTokenString) {
+          return reply.code(401).send("Unauthorized");
+        }
+        const rawUserToken = JSON.parse(rawUserTokenString);
 
-      server.log.info(`User ${sessionId}: ${JSON.stringify(validatedUser)}`);
-      return reply.send(validatedUser);
+        // Parse the token using Zod; if it fails, a ZodError will be thrown.
+        const userToken = AnyAuthTokenSchema.parse(rawUserToken);
+
+        // Attempt to get the user data from the AnyAuth API
+        server.log.info(`User token: ${JSON.stringify(userToken)}`);
+        server.log.info(`User token: ${userToken.access_token}`);
+        const rawUser = await anyAuthApiActiveUserClient.get("/me", {
+          headers: { Authorization: `Bearer ${userToken.access_token}` },
+        });
+
+        // Parse the received user data
+        const validatedUser = AnyAuthUserSchema.parse(rawUser.data);
+
+        server.log.info(`User ${sessionId}: ${JSON.stringify(validatedUser)}`);
+        return reply.send(validatedUser);
+      } catch (error) {
+        // Check if the error is a Zod validation error
+        if (error instanceof z.ZodError) {
+          server.log.error(
+            `Validation error in GET /me endpoint: ${JSON.stringify(
+              error.errors
+            )}`
+          );
+          return reply
+            .code(500)
+            .send({ error: "Internal Server Error", details: error.message });
+        }
+        // Log any other errors and return a 500 response
+        server.log.error(`Error in GET /me endpoint: ${error.message}`);
+        return reply
+          .code(500)
+          .send({ error: "Internal Server Error", details: error.message });
+      }
     });
 
     await server.vite.ready();
