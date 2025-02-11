@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
-import { Logger } from "../utils/logger.js";
 import { setGlobalLogger } from "../utils/logger-singleton.js";
+import { Logger } from "../utils/logger.js";
 
 // eslint-disable-next-line no-unused-vars
 export default fp(async function (fastify, options) {
