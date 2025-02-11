@@ -1,131 +1,30 @@
-import Fastify from "fastify";
-import FastifyVite from "@fastify/vite";
-import axios from "axios";
-import crypto from "node:crypto";
-import fastifyEnv from "@fastify/env";
-import fastifyOAuth2 from "@fastify/oauth2";
-import fetch from "node-fetch";
-import flatCache from "flat-cache";
-import loggerPlugin from "./plugins/logger.js";
 import process from "node:process";
 import { URLSearchParams } from "node:url";
-import { envOptions } from "./plugins/env.js";
-import { faker } from "@faker-js/faker";
+import fastifyEnv from "@fastify/env";
+import fastifyOAuth2 from "@fastify/oauth2";
+import FastifyVite from "@fastify/vite";
+import axios from "axios";
+import Fastify from "fastify";
+import flatCache from "flat-cache";
+import fetch from "node-fetch";
 import { z } from "zod";
+import { envOptions } from "./plugins/env.js";
+import loggerPlugin from "./plugins/logger.js";
+import {
+  AnyAuthTokenSchema,
+  AnyAuthUserSchema,
+  AnyAuthUserCreateSchema,
+  GoogleAccessTokenSchema,
+  GoogleUserInfoSchema,
+} from "./schemas/index.js";
+
+import { generateRandomString } from "./utils/rand.js";
 
 // 7 days in seconds
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
 
 // Cache Options
 const cache = flatCache.create({ cacheDir: ".cache" });
-
-// Helper function to generate random string
-function generateRandomString(length = 64) {
-  return crypto.randomBytes(length).toString("hex");
-}
-
-// Schemas
-const GoogleAccessTokenSchema = z.object({
-  token: z.object({
-    access_token: z.string(),
-    expires_in: z.number(),
-    scope: z.string(),
-    token_type: z.string(),
-    id_token: z.string(),
-    expires_at: z.string().or(z.date()),
-  }),
-});
-
-const GoogleUserInfoSchema = z
-  .object({
-    id: z.string(),
-    email: z.string().email(),
-    verified_email: z.boolean(),
-    name: z.string(),
-    given_name: z.string(),
-    picture: z.string(),
-  })
-  .transform((googleUser) => ({
-    ...googleUser,
-
-    toAnyAuthUserCreate: () => ({
-      username: googleUser.email.split("@")[0],
-      full_name: googleUser.name,
-      email: googleUser.email,
-      phone: null,
-      password: Array.from({ length: 4 }, () => faker.internet.password()).join(
-        ""
-      ),
-      metadata: {
-        provider: "google",
-        googleId: googleUser.id,
-        picture: googleUser.picture,
-        verified_email: googleUser.verified_email,
-      },
-    }),
-  }));
-
-const AnyAuthTokenSchema = z
-  .object({
-    access_token: z.string(),
-    refresh_token: z.string(),
-    token_type: z.string(),
-    scope: z.string(),
-    expires_at: z.number(),
-    expires_in: z.number(),
-    issued_at: z.string(), // Assuming issued_at is a string in ISO format
-    meta: z.record(z.any()).optional(), // Assuming meta is an object (record) with any key-value pairs and is optional
-  })
-  .transform((token) => ({
-    ...token,
-
-    isTokenExpired: () => {
-      const now = new Date();
-      const expiresAtDate = new Date(token.expires_at * 1000);
-      return expiresAtDate < now;
-    },
-  }));
-
-const AnyAuthUserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  full_name: z.string().nullable(),
-  email: z.string().email(),
-  email_verified: z.boolean(),
-  phone: z.string().nullable(),
-  phone_verified: z.boolean(),
-  disabled: z.boolean(),
-  profile: z.string(),
-  picture: z.string(),
-  website: z.string(),
-  gender: z.string(),
-  birthdate: z.string(),
-  zoneinfo: z.string(),
-  locale: z.string(),
-  address: z.string(),
-  metadata: z.record(z.any()),
-  created_at: z.number(),
-  updated_at: z.number(),
-});
-
-const AnyAuthUserCreateSchema = z.object({
-  username: z
-    .string()
-    .min(4, { message: "Username must be at least 4 characters" })
-    .max(64, { message: "Username must be at most 64 characters" })
-    .regex(/^[a-zA-Z0-9_-]+$/, {
-      message:
-        "Username must only contain alphanumeric characters, underscores, or hyphens",
-    }),
-  full_name: z.string().optional().nullable(),
-  email: z.string().email({ message: "Invalid email address" }),
-  phone: z.string().optional().nullable(),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters" })
-    .max(64, { message: "Password must be at most 64 characters" }),
-  metadata: z.record(z.any()).default({}),
-});
 
 // Helper Functions
 /**
