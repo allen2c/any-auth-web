@@ -54,6 +54,7 @@
     "@vitejs/plugin-react": "*",
     "autoprefixer": "*",
     "eslint": "*",
+    "eslint-plugin-import": "^2.31.0",
     "postcss": "*",
     "postcss-nesting": "*",
     "postcss-preset-env": "*",
