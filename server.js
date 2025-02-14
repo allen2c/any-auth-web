@@ -1,6 +1,5 @@
 // server.js
 import process from "node:process";
-import { URLSearchParams } from "node:url";
 import fastifyEnv from "@fastify/env";
 import FastifyVite from "@fastify/vite";
 import Fastify from "fastify";
@@ -11,53 +10,17 @@ import { envOptions } from "./plugins/env.js";
 import loggerPlugin from "./plugins/logger.js";
 import oauthPlugin from "./plugins/oauth.js";
 import userTokenCachePlugin from "./plugins/userTokenCache.js";
-import { AnyAuthTokenSchema, AnyAuthUserSchema } from "./schemas/index.js";
-
-/**
- * Get a user token from the cache.
- *
- * @param {string} sessionId - The session identifier.
- * @returns {import("zod").infer<typeof AnyAuthTokenSchema> | null} - Token data matching the AnyAuthTokenSchema, or null if not found.
- */
-async function getAndRefreshIfExpiredUserTokenFromCache(sessionId) {
-  const token = getUserTokenFromCache(sessionId);
-  if (token === null) return null;
-  if (token.isTokenExpired()) {
-    try {
-      const params = new URLSearchParams();
-      params.append("grant_type", "refresh_token");
-      params.append("refresh_token", token.refresh_token);
-      const refreshedToken = await anyAuthApiActiveUserClient.post(
-        "/refresh-token",
-        params,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        }
-      );
-      saveUserTokenToCache(sessionId, refreshedToken);
-      return refreshedToken;
-    } catch (error) {
-      server.log.error(
-        `Failed to refresh token from cache: ${JSON.stringify(error)}`
-      );
-      return null;
-    }
-  }
-  return token;
-}
+import { AnyAuthUserSchema } from "./schemas/index.js";
 
 // Fastify Application
-const server = Fastify({
-  logger: {
-    transport: {
-      target: "@fastify/one-line-logger",
-    },
-  },
-});
-
 async function startServer() {
+  const server = Fastify({
+    logger: {
+      transport: {
+        target: "@fastify/one-line-logger",
+      },
+    },
+  });
   try {
     await server.register(fastifyEnv, envOptions);
     server.log.info(
@@ -110,9 +73,10 @@ async function startServer() {
         }
 
         // Get the user token from the cache
-        const userToken = await getAndRefreshIfExpiredUserTokenFromCache(
-          sessionId
-        );
+        const userToken =
+          await server.anyAuthApiActiveUserClient.getAndRefreshIfExpiredUserTokenFromCache(
+            sessionId
+          );
         if (!userToken) {
           return reply.code(401).send("Unauthorized");
         }
