@@ -9,6 +9,7 @@ const schema = {
   type: "object",
   required: [
     "NODE_ENV",
+    "ANY_AUTH_BASE_URL",
     "APPLICATION_USERNAME",
     "APPLICATION_PASSWORD",
     "GOOGLE_CLIENT_SECRET",
@@ -19,6 +20,11 @@ const schema = {
       type: "string",
       default: "development",
       enum: ["development", "staging", "production", "test"],
+    },
+    ANY_AUTH_BASE_URL: {
+      type: "string",
+      default: "http://127.0.0.1:8000",
+      minLength: 1,
     },
     APPLICATION_USERNAME: { type: "string", minLength: 1 },
     APPLICATION_PASSWORD: { type: "string", minLength: 1 },

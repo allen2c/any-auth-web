@@ -37,13 +37,13 @@ async function startServer() {
 
     // Register the anyAuth API client plugin
     await server.register(anyAuthApiServerClientPlugin, {
-      baseURL: "http://127.0.0.1:8000",
+      baseURL: server.config.ANY_AUTH_BASE_URL,
     });
     server.log.info("Registered AnyAuth Server API client");
 
     // Register the anyAuth API client plugin
     await server.register(anyAuthApiActiveUserClientPlugin, {
-      baseURL: "http://127.0.0.1:8000",
+      baseURL: server.config.ANY_AUTH_BASE_URL,
     });
     server.log.info("Registered AnyAuth Active User API client");
 
