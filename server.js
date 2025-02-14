@@ -9,16 +9,16 @@ import Fastify from "fastify";
 import flatCache from "flat-cache";
 import fetch from "node-fetch";
 import { z } from "zod";
+import anyAuthApiActiveUserClientPlugin from "./plugins/anyAuthApiActiveUserClient.js";
+import anyAuthApiServerClientPlugin from "./plugins/anyAuthApiServerClient.js";
 import { envOptions } from "./plugins/env.js";
 import loggerPlugin from "./plugins/logger.js";
 import {
   AnyAuthTokenSchema,
   AnyAuthUserSchema,
-  AnyAuthUserCreateSchema,
   GoogleAccessTokenSchema,
   GoogleUserInfoSchema,
 } from "./schemas/index.js";
-import anyAuthApiServerClientPlugin from "./plugins/anyAuthApiServerClient.js";
 import { generateRandomString } from "./utils/rand.js";
 
 // 7 days in seconds
@@ -87,15 +87,6 @@ async function getAndRefreshIfExpiredUserTokenFromCache(sessionId) {
   return token;
 }
 
-// AnyAuth API Client
-const anyAuthApiActiveUserClient = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-anyAuthApiActiveUserClient.state = {};
-
 // Fastify Application
 const server = Fastify({
   logger: {
@@ -120,6 +111,12 @@ async function startServer() {
       baseURL: "http://127.0.0.1:8000",
     });
     server.log.info("Registered AnyAuth Server API client");
+
+    // Register the anyAuth API client plugin
+    await server.register(anyAuthApiActiveUserClientPlugin, {
+      baseURL: "http://127.0.0.1:8000",
+    });
+    server.log.info("Registered AnyAuth Active User API client");
 
     // Authenticate API client before proceeding
     await server.anyAuthApiServerClient.authenticate();
