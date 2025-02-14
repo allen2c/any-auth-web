@@ -11,6 +11,7 @@ import fetch from "node-fetch";
 import { z } from "zod";
 import anyAuthApiActiveUserClientPlugin from "./plugins/anyAuthApiActiveUserClient.js";
 import anyAuthApiServerClientPlugin from "./plugins/anyAuthApiServerClient.js";
+import cacheUserTokenPlugin from "./plugins/cacheUserToken.js";
 import { envOptions } from "./plugins/env.js";
 import loggerPlugin from "./plugins/logger.js";
 import {
@@ -23,34 +24,6 @@ import { generateRandomString } from "./utils/rand.js";
 
 // 7 days in seconds
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
-
-// Cache Options
-const cache = flatCache.create({ cacheDir: ".cache" });
-
-// Helper Functions
-/**
- * Get a user token from the cache.
- *
- * @param {string} sessionId - The session identifier.
- * @returns {import("zod").infer<typeof AnyAuthTokenSchema> | null} - Token data matching the AnyAuthTokenSchema, or null if not found.
- */
-function getUserTokenFromCache(sessionId) {
-  const raw = cache.getKey(sessionId);
-  if (!raw) return null;
-  return AnyAuthTokenSchema.parse(JSON.parse(raw));
-}
-
-/**
- * Save a user token to the cache.
- *
- * @param {string} sessionId - The session identifier.
- * @param {import("zod").infer<typeof AnyAuthTokenSchema>} tokenData - Token data matching the AnyAuthTokenSchema.
- */
-function saveUserTokenToCache(sessionId, token) {
-  // How to hint annotation of data type for tokenData as `AnyAuthTokenSchema`?
-  cache.setKey(sessionId, JSON.stringify(token));
-  cache.save();
-}
 
 /**
  * Get a user token from the cache.
@@ -105,6 +78,11 @@ async function startServer() {
 
     // Register the logger plugin
     await server.register(loggerPlugin);
+
+    // Register the user token cache plugin
+    await server.register(cacheUserTokenPlugin, {
+      cacheDir: ".cache",
+    });
 
     // Register the anyAuth API client plugin
     await server.register(anyAuthApiServerClientPlugin, {
