@@ -10,6 +10,7 @@ import { envOptions } from "./plugins/env.js";
 import loggerPlugin from "./plugins/logger.js";
 import oauthPlugin from "./plugins/oauth.js";
 import userTokenCachePlugin from "./plugins/userTokenCache.js";
+import authRoutes from "./routes/auth.js";
 import { AnyAuthUserSchema } from "./schemas/index.js";
 
 // Fastify Application
@@ -112,6 +113,8 @@ async function startServer() {
           .send({ error: "Internal Server Error", details: error.message });
       }
     });
+
+    await server.register(authRoutes);
 
     await server.vite.ready();
     await server.listen({ port: 3000 });
