@@ -1,3 +1,4 @@
+// server.js
 import process from "node:process";
 import { URLSearchParams } from "node:url";
 import fastifyEnv from "@fastify/env";
@@ -17,7 +18,7 @@ import {
   GoogleAccessTokenSchema,
   GoogleUserInfoSchema,
 } from "./schemas/index.js";
-
+import anyAuthApiServerClientPlugin from "./plugins/anyAuthApiServerClient.js";
 import { generateRandomString } from "./utils/rand.js";
 
 // 7 days in seconds
@@ -87,196 +88,6 @@ async function getAndRefreshIfExpiredUserTokenFromCache(sessionId) {
 }
 
 // AnyAuth API Client
-const anyAuthApiServerClient = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-anyAuthApiServerClient.state = {};
-anyAuthApiServerClient.authenticate = async function () {
-  try {
-    // Validate critical environment variables
-    if (
-      !process.env.APPLICATION_USERNAME ||
-      !process.env.APPLICATION_PASSWORD
-    ) {
-      const missingEnvs = [];
-      if (!process.env.APPLICATION_USERNAME)
-        missingEnvs.push("APPLICATION_USERNAME");
-      if (!process.env.APPLICATION_PASSWORD)
-        missingEnvs.push("APPLICATION_PASSWORD");
-
-      const errorMessage = `Missing required environment variables: ${missingEnvs.join(
-        ", "
-      )}`;
-      server.log.info(errorMessage);
-      throw new Error(errorMessage);
-    }
-
-    const params = new URLSearchParams();
-    params.append("username", process.env.APPLICATION_USERNAME);
-    params.append("password", process.env.APPLICATION_PASSWORD);
-    params.append("grant_type", "password");
-
-    const response = await anyAuthApiServerClient.post("/token", params, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-    if (!response.data) {
-      throw new Error("No response data received from authentication request");
-    }
-
-    const validatedAnyAuthToken = AnyAuthTokenSchema.parse(response.data);
-    const { access_token } = validatedAnyAuthToken;
-    server.log.info(
-      `AnyAuth application access token: ${JSON.stringify(access_token)}`
-    );
-
-    // Set the JWT token for all future requests
-    anyAuthApiServerClient.defaults.headers.common[
-      "Authorization"
-    ] = `Bearer ${access_token}`;
-
-    // **--- Token Validation Step ---**
-    server.log.info("Validating access token by calling /me API...");
-    try {
-      const meResponse = await anyAuthApiServerClient.get("/me");
-      if (!meResponse.data) {
-        throw new Error("No data received from /me API validation call");
-      }
-      const validatedMeResponse = AnyAuthUserSchema.parse(meResponse.data);
-
-      // Set the user for the server side client
-      anyAuthApiServerClient.state.user = validatedMeResponse;
-      // Set the token for the server side client
-      anyAuthApiServerClient.state.token = validatedMeResponse;
-      server.log.info(
-        `[GET /me] API call successful: ${JSON.stringify(validatedMeResponse)}`
-      );
-    } catch (meError) {
-      server.log.error(
-        `[GET /me] API call failed, access token is invalid: ${JSON.stringify(
-          meError.response ? meError.response.status : meError.message
-        )}`
-      );
-      throw new Error(`Failed to validate access token: ${meError.message}`); // Re-throw error to indicate authentication failure
-    }
-    // **--- End Token Validation Step ---**
-
-    return true;
-  } catch (error) {
-    server.log.error(
-      `Failed to authenticate API client: ${JSON.stringify(error)}`
-    );
-    throw error;
-  }
-};
-anyAuthApiServerClient.refreshToken = async function () {
-  // Ensure we have a stored token with a refresh token
-  if (!this.state.token || !this.state.token.refresh_token) {
-    server.log.error("No refresh token available. Please authenticate first.");
-    throw new Error("No refresh token available. Please authenticate first.");
-  }
-
-  // Build the URL-encoded request body with grant_type and refresh_token
-  const params = new URLSearchParams();
-  params.append("grant_type", "refresh_token");
-  params.append("refresh_token", this.state.token.refresh_token);
-
-  try {
-    // Send POST request with form data
-    const response = await this.post("/refresh-token", params, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-
-    // Validate the response data using our token schema
-    const newToken = AnyAuthTokenSchema.parse(response.data);
-
-    // Update the default Authorization header with the new access token
-    this.defaults.headers.common[
-      "Authorization"
-    ] = `Bearer ${newToken.access_token}`;
-
-    // Save the new token in the client state
-    this.state.token = newToken;
-
-    server.log.info("Refresh token successful: " + JSON.stringify(newToken));
-    return newToken;
-  } catch (error) {
-    server.log.error(`Failed to refresh token: ${JSON.stringify(error)}`);
-    throw error;
-  }
-};
-/**
- * Registers a new user via the AnyAuth API.
- *
- * @param {import("zod").infer<typeof AnyAuthUserCreateSchema>} userData - The user's data to be registered.
- * @returns {Promise<import("zod").infer<typeof AnyAuthTokenSchema>>} A promise that resolves with the token object.
- * @throws Will throw an error if the registration process fails.
- */
-anyAuthApiServerClient.registerUser = async function (userData) {
-  try {
-    // Validate the incoming user data against the expected schema.
-    // This schema corresponds to the OpenAPI /register request body (UserCreate)
-    const validatedUserData = AnyAuthUserCreateSchema.parse(userData);
-    server.log.info(
-      `Registering new user: ${JSON.stringify(validatedUserData)}`
-    );
-
-    // Make a POST request to the /register endpoint with the validated user data.
-    const response = await anyAuthApiServerClient.post(
-      "/register",
-      validatedUserData
-    );
-
-    // Validate the response data against the expected Token schema.
-    // The /register endpoint is documented to return a Token object.
-    const token = AnyAuthTokenSchema.parse(response.data);
-    server.log.info("User registered successfully:", token);
-
-    // Return the token (or you could choose to handle it further)
-    return token;
-  } catch (error) {
-    server.log.error(`Failed to register user: ${error}`);
-    throw error;
-  }
-};
-anyAuthApiServerClient.interceptors.response.use(
-  (response) => response, // Response directly if successful
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Check if the error is a 401 and has not attempted to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Mark as retried to avoid infinite loops
-
-      try {
-        server.log.info("Access token expired, attempting to refresh...");
-        await anyAuthApiServerClient.refreshToken();
-        server.log.info("Successfully refreshed access token.");
-
-        // Use the new token to resend the original request
-        originalRequest.headers.Authorization =
-          anyAuthApiServerClient.defaults.headers.common.Authorization;
-        return anyAuthApiServerClient(originalRequest); // Resend the request
-      } catch (refreshError) {
-        server.log.error(
-          `Failed to refresh access token: ${JSON.stringify(refreshError)}`
-        );
-        // Authentication failed, you can choose to throw an error or handle it in another way (e.g., log out the application)
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // Non-401 error, or refresh validation failed, throw an error
-    return Promise.reject(error);
-  }
-);
-
 const anyAuthApiActiveUserClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
   headers: {
@@ -304,8 +115,14 @@ async function startServer() {
     // Register the logger plugin
     await server.register(loggerPlugin);
 
+    // Register the anyAuth API client plugin
+    await server.register(anyAuthApiServerClientPlugin, {
+      baseURL: "http://127.0.0.1:8000",
+    });
+    server.log.info("Registered AnyAuth Server API client");
+
     // Authenticate API client before proceeding
-    await anyAuthApiServerClient.authenticate();
+    await server.anyAuthApiServerClient.authenticate();
     server.log.info("API clients authenticated successfully");
 
     await server.register(FastifyVite, {
@@ -380,7 +197,7 @@ async function startServer() {
         );
 
         // Register the user
-        const user_token = await anyAuthApiServerClient.registerUser(
+        const user_token = await server.anyAuthApiServerClient.registerUser(
           userInfo.toAnyAuthUserCreate()
         );
         request.log.info(`Login user token: ${JSON.stringify(user_token)}`);
