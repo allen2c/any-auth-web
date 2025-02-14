@@ -1,7 +1,7 @@
 // plugins/userTokenCache.js
 import fp from "fastify-plugin";
 import flatCache from "flat-cache";
-import { AnyAuthTokenSchema } from "./schemas/index.js";
+import { AnyAuthTokenSchema } from "../schemas/index.js";
 
 export default fp(async function (fastify, options) {
   const cacheInstance = flatCache.create({
