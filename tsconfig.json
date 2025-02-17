@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "target": "ES2020", // Compiler target language version, set to ES2020
+        "module": "ESNext", // Module system, used with "type": "module" in package.json
+        "moduleResolution": "node", // Module resolution strategy
+        "jsx": "react-jsx", // Use new JSX transformation (React 17+)
+        "strict": true, // Enable all strict checks
+        "esModuleInterop": true, // Allow default import of CommonJS modules
+        "forceConsistentCasingInFileNames": true, // Enforce consistent casing in file names
+        "skipLibCheck": true, // Skip type checking for .d.ts files
+        "allowSyntheticDefaultImports": true, // Allow default import from modules that don't have a default export
+        "resolveJsonModule": true, // Allow importing JSON modules
+        "isolatedModules": true, // Compile each file as a separate module (suitable for Babel etc.)
+        "noEmit": true, // Don't produce compiled files (suitable for using Vite etc. only for type checking)
+        "baseUrl": ".", // Base path, can be used to set module aliases with paths
+        "paths": {
+            "~/*": [
+                "./*"
+            ] // Example: Set ~ as an alias for the project root
+        }
+    },
+    "include": [
+        "./**/*.ts",
+        "./**/*.tsx"
+    ], // Include all TypeScript and TSX files
+    "exclude": [
+        "node_modules",
+        "dist"
+    ] // Exclude node_modules and output directory
+}

@@ -1,15 +1,25 @@
-// plugins/anyAuthApiClient.js
+// plugins/anyAuthApiClient.ts
 import { URLSearchParams } from "node:url";
 import axios from "axios";
 import fp from "fastify-plugin";
+import { FastifyInstance } from "fastify";
 
-export default fp(async function (fastify, options) {
+interface AnyAuthApiClientOptions {
+  baseURL?: string;
+}
+
+type AxiosInstanceWithState = ReturnType<typeof axios.create> & { state: any };
+
+export default fp(async function (
+  fastify: FastifyInstance,
+  options: AnyAuthApiClientOptions
+) {
   const anyAuthApiActiveUserClient = axios.create({
     baseURL: options.baseURL || "http://127.0.0.1:8000",
     headers: {
       "Content-Type": "application/json",
     },
-  });
+  }) as AxiosInstanceWithState;
   anyAuthApiActiveUserClient.state = {};
 
   /**

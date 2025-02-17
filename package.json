@@ -2,7 +2,7 @@
   "name": "any-auth-web",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "server.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/allen2c/any-auth-web.git"
@@ -16,13 +16,13 @@
   "homepage": "https://github.com/allen2c/any-auth-web#readme",
   "type": "module",
   "scripts": {
-    "dev": "node server.js --dev",
-    "start": "node server.js",
+    "dev": "node server.ts --dev",
+    "start": "node server.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client --ssrManifest",
     "build:server": "vite build --outDir dist/server --ssr /index.js",
-    "devinstall": "zx ../../devinstall.mjs -- node server.js --dev",
-    "lint": "eslint . --fix"
+    "devinstall": "zx ../../devinstall.mjs -- node server.ts --dev",
+    "lint": "eslint . --fix && tsc --noEmit"
   },
   "dependencies": {
     "@faker-js/faker": "^9",
@@ -51,6 +51,8 @@
     "zod": "^3"
   },
   "devDependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/node": "^22.13.4",
     "@vitejs/plugin-react": "*",
     "autoprefixer": "*",
     "eslint": "*",

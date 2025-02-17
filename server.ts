@@ -1,9 +1,9 @@
-// server.js
+// server.ts
 import process from "node:process";
 import fastifyEnv from "@fastify/env";
 import FastifyVite from "@fastify/vite";
 import Fastify from "fastify";
-import anyAuthApiActiveUserClientPlugin from "./plugins/anyAuthApiActiveUserClient.js";
+import anyAuthApiActiveUserClientPlugin from "./plugins/anyAuthApiActiveUserClient.ts";
 import anyAuthApiServerClientPlugin from "./plugins/anyAuthApiServerClient.js";
 import { envOptions } from "./plugins/env.js";
 import loggerPlugin from "./plugins/logger.js";
@@ -12,7 +12,7 @@ import userTokenCachePlugin from "./plugins/userTokenCache.js";
 import authRoutes from "./routes/auth.js";
 
 // Fastify Application
-async function startServer() {
+async function startServer(): Promise<void> {
   const server = Fastify({
     logger: {
       transport: {
