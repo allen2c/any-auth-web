@@ -46,7 +46,9 @@ async function oauthPlugin(fastify, options) {
           request
         );
       const validatedToken = GoogleAccessTokenSchema.parse(rawToken);
-      request.log.info(`Token object: ${JSON.stringify(validatedToken)}`);
+      request.log.info(
+        `Google Token object: ${JSON.stringify(validatedToken)}`
+      );
 
       if (!validatedToken.token.access_token) {
         throw new Error("No access token received from Google");
