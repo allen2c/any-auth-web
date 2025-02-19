@@ -1,12 +1,10 @@
+// schemas/index.ts
 import {
   AnyAuthTokenSchema,
   AnyAuthUserSchema,
   AnyAuthUserCreateSchema,
-} from "./anyAuthSchema.js";
-import {
-  GoogleAccessTokenSchema,
-  GoogleUserInfoSchema,
-} from "./googleSchema.js";
+} from "./anyAuthSchema";
+import { GoogleAccessTokenSchema, GoogleUserInfoSchema } from "./googleSchema";
 
 export {
   AnyAuthTokenSchema,

@@ -1,7 +1,8 @@
+// schemas/googleSchema.ts
 import { faker } from "@faker-js/faker";
 import { z } from "zod";
 
-const GoogleAccessTokenSchema = z.object({
+export const GoogleAccessTokenSchema = z.object({
   token: z.object({
     access_token: z.string(),
     expires_in: z.number(),
@@ -12,7 +13,7 @@ const GoogleAccessTokenSchema = z.object({
   }),
 });
 
-const GoogleUserInfoSchema = z
+export const GoogleUserInfoSchema = z
   .object({
     id: z.string(),
     email: z.string().email(),
@@ -23,7 +24,6 @@ const GoogleUserInfoSchema = z
   })
   .transform((googleUser) => ({
     ...googleUser,
-
     toAnyAuthUserCreate: () => ({
       username: googleUser.email.split("@")[0],
       full_name: googleUser.name,
@@ -40,5 +40,3 @@ const GoogleUserInfoSchema = z
       },
     }),
   }));
-
-export { GoogleAccessTokenSchema, GoogleUserInfoSchema };

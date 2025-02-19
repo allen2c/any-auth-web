@@ -1,6 +1,7 @@
+// schemas/anyAuthSchema.ts
 import { z } from "zod";
 
-const AnyAuthTokenSchema = z
+export const AnyAuthTokenSchema = z
   .object({
     access_token: z.string(),
     refresh_token: z.string(),
@@ -13,15 +14,14 @@ const AnyAuthTokenSchema = z
   })
   .transform((token) => ({
     ...token,
-
-    isTokenExpired: () => {
+    isTokenExpired: (): boolean => {
       const now = new Date();
       const expiresAtDate = new Date(token.expires_at * 1000);
       return expiresAtDate < now;
     },
   }));
 
-const AnyAuthUserSchema = z.object({
+export const AnyAuthUserSchema = z.object({
   id: z.string(),
   username: z.string(),
   full_name: z.string().nullable(),
@@ -43,7 +43,7 @@ const AnyAuthUserSchema = z.object({
   updated_at: z.number(),
 });
 
-const AnyAuthUserCreateSchema = z.object({
+export const AnyAuthUserCreateSchema = z.object({
   username: z
     .string()
     .min(4, { message: "Username must be at least 4 characters" })
@@ -61,5 +61,3 @@ const AnyAuthUserCreateSchema = z.object({
     .max(64, { message: "Password must be at most 64 characters" }),
   metadata: z.record(z.any()).default({}),
 });
-
-export { AnyAuthTokenSchema, AnyAuthUserSchema, AnyAuthUserCreateSchema };
