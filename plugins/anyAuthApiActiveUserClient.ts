@@ -3,23 +3,37 @@ import { URLSearchParams } from "node:url";
 import axios from "axios";
 import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import { AnyAuthTokenSchema } from "../schemas/anyAuthSchema";
+
+type AnyAuthToken = z.infer<typeof AnyAuthTokenSchema>;
+
+type AxiosInstanceType = ReturnType<typeof axios.create>;
 
 interface AnyAuthApiClientOptions {
   baseURL?: string;
 }
 
-type AxiosInstanceWithState = ReturnType<typeof axios.create> & { state: any };
+interface AnyAuthApiActiveUserClient extends AxiosInstanceType {
+  state: any;
+  getAndRefreshIfExpiredUserTokenFromCache(
+    sessionId: string
+  ): Promise<AnyAuthToken | null>;
+}
 
 export default fp(async function (
   fastify: FastifyInstance,
   options: AnyAuthApiClientOptions
 ) {
+  // Initialize the instance and assert it to our custom interface
   const anyAuthApiActiveUserClient = axios.create({
     baseURL: options.baseURL || "http://127.0.0.1:8000",
     headers: {
       "Content-Type": "application/json",
     },
-  }) as AxiosInstanceWithState;
+  }) as AnyAuthApiActiveUserClient;
+
+  // Initialize the state property
   anyAuthApiActiveUserClient.state = {};
 
   /**
@@ -29,7 +43,7 @@ export default fp(async function (
    * @returns {import("zod").infer<typeof AnyAuthTokenSchema> | null} - Token data matching the AnyAuthTokenSchema, or null if not found.
    */
   anyAuthApiActiveUserClient.getAndRefreshIfExpiredUserTokenFromCache =
-    async function (sessionId) {
+    async function (sessionId: string) {
       const token = fastify.userTokenCache.getUserTokenFromCache(sessionId);
       if (token === null) return null;
       if (token.isTokenExpired()) {
